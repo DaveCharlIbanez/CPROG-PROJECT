@@ -1,0 +1,441 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public enum Device
+{
+    Laptop,
+    Smartphone,
+    Tablet,
+    Aircon,
+    Washingmachine,
+    Television,
+    Light,
+    Refrigerator
+}
+
+public enum Switch
+{
+    Off,
+    Low,
+    On
+}
+
+public interface mydevices
+{
+    void DisplayInfo();
+    bool IsValid();
+    void TogglePower();
+    void UpdateDevice(string name, Device deviceType);
+}
+
+public class Location
+{
+    public string LocationName { get; set; }
+    public List<mydevices> Devices { get; set; } = new List<mydevices>();
+
+    public Location(string locationName)
+    {
+        LocationName = locationName;
+    }
+
+    public void AddDevice(mydevices device)
+    {
+        Devices.Add(device);
+    }
+
+    public bool RemoveDevice(int deviceId)
+    {
+        var device = Devices.FirstOrDefault(d => d is MyDevice && ((MyDevice)d).Id == deviceId);
+        if (device != null)
+        {
+            Devices.Remove(device);
+            return true;
+        }
+        return false;
+    }
+
+    public void DisplayDevices()
+    {
+        Console.WriteLine($"Devices in {LocationName}:");
+        foreach (var device in Devices)
+        {
+            device.DisplayInfo();
+        }
+    }
+
+    public int CountDevices()
+    {
+        return Devices.Count;
+    }
+}
+
+public class User
+{
+    public string UserName { get; set; }
+
+    public User(string userName)
+    {
+        UserName = userName;
+    }
+}
+
+public class MyDevice : mydevices
+{
+    public int Id { get; set; }
+    public Device DeviceType { get; set; }
+    public string Name { get; set; }
+    public bool IsOn { get; private set; }
+    public Switch LightState { get; private set; } = Switch.Off;
+
+    public MyDevice(int id, Device deviceType, string name)
+    {
+        Id = id;
+        DeviceType = deviceType;
+        Name = name;
+        IsOn = false;
+    }
+
+    public void DisplayInfo()
+    {
+        if (DeviceType == Device.Light)
+        {
+            Console.WriteLine($"Device ID: {Id}, Device Type: {DeviceType}, Name: {Name}, Power: {LightState}");
+        }
+        else
+        {
+            Console.WriteLine($"Device ID: {Id}, Device Type: {DeviceType}, Name: {Name}, Power: {(IsOn ? "On" : "Off")}");
+        }
+    }
+
+    public bool IsValid()
+    {
+        return !string.IsNullOrEmpty(Name);
+    }
+
+    public void TogglePower()
+    {
+        if (DeviceType == Device.Light)
+        {
+            LightState = LightState switch
+            {
+                Switch.Off => Switch.Low,
+                Switch.Low => Switch.On,
+                Switch.On => Switch.Off,
+                _ => Switch.Off
+            };
+            Console.WriteLine($"{Name} is now {LightState}");
+        }
+        else
+        {
+            IsOn = !IsOn;
+            Console.WriteLine($"{Name} is now {(IsOn ? "On" : "Off")}");
+        }
+    }
+
+    public void UpdateDevice(string name, Device deviceType)
+    {
+        Name = name;
+        DeviceType = deviceType;
+        Console.WriteLine($"Device updated: ID: {Id}, New Name: {Name}, New Device Type: {DeviceType}");
+    }
+}
+
+public class Repository<T> where T : mydevices
+{
+    private List<Location> _locations = new List<Location>();
+
+    public void AddLocation(Location location)
+    {
+        _locations.Add(location);
+    }
+
+    public void DisplayAllLocations()
+    {
+        foreach (var location in _locations)
+        {
+            location.DisplayDevices();
+        }
+    }
+
+    public void ToggleDevicePower(int locationIndex, int deviceId)
+    {
+        if (locationIndex >= 0 && locationIndex < _locations.Count)
+        {
+            var location = _locations[locationIndex];
+            var device = location.Devices.Find(d => d is MyDevice && ((MyDevice)d).Id == deviceId);
+            if (device != null)
+            {
+                device.TogglePower();
+            }
+            else
+            {
+                Console.WriteLine("Device not found.");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Location not found.");
+        }
+    }
+
+    public int CountAllDevices()
+    {
+        return _locations.Sum(location => location.CountDevices());
+    }
+
+    public void ToggleAllDevicesPower(int locationIndex)
+    {
+        if (locationIndex >= 0 && locationIndex < _locations.Count)
+        {
+            var location = _locations[locationIndex];
+            foreach (var device in location.Devices)
+            {
+                device.TogglePower();
+            }
+        }
+        else
+        {
+            Console.WriteLine("Location not found.");
+        }
+    }
+
+    public void UpdateDevice(int locationIndex, int deviceId, string newName, Device newDeviceType)
+    {
+        if (locationIndex >= 0 && locationIndex < _locations.Count)
+        {
+            var location = _locations[locationIndex];
+            var device = location.Devices.Find(d => d is MyDevice && ((MyDevice)d).Id == deviceId);
+            if (device != null)
+            {
+                device.UpdateDevice(newName, newDeviceType);
+            }
+            else
+            {
+                Console.WriteLine("Device not found.");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Location not found.");
+        }
+    }
+
+    public void RemoveDevice(int locationIndex, int deviceId)
+    {
+        if (locationIndex >= 0 && locationIndex < _locations.Count)
+        {
+            var location = _locations[locationIndex];
+            if (location.RemoveDevice(deviceId))
+            {
+                Console.WriteLine($"Device with ID {deviceId} removed.");
+            }
+            else
+            {
+                Console.WriteLine("Device not found.");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Location not found.");
+        }
+    }
+
+    // Public method to add a device to a specific location
+    public void AddDeviceToLocation(int locationIndex, MyDevice device)
+    {
+        if (locationIndex >= 0 && locationIndex < _locations.Count)
+        {
+            _locations[locationIndex].AddDevice(device);
+            Console.WriteLine($"Device Added.");
+        }
+        else
+        {
+            Console.WriteLine("Location not found.");
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        List<User> validUsers = new List<User>
+        {
+            new User("Tweety Bird"),
+            new User("Fairy The Platypus"),
+            new User("Bogart The Explorer"),
+            new User("Garfield Kaon Kangkong")
+        };
+
+        User loggeInUser = null;
+        bool isAuthenticated = false;
+
+        while (!isAuthenticated)
+        {
+            Console.WriteLine("Enter username:");
+            string username = Console.ReadLine();
+
+            loggeInUser = validUsers.FirstOrDefault(u => u.UserName == username);
+
+            if (loggeInUser != null)
+            {
+                isAuthenticated = true;
+                Console.WriteLine($"Welcome, {loggeInUser.UserName}!");
+            }
+            else
+            {
+                Console.WriteLine("Invalid username. Please try again.");
+            }
+        }
+
+        Repository<mydevices> repository = new Repository<mydevices>();
+        bool continueAdding = true;
+
+        while (continueAdding)
+        {
+            Console.WriteLine("Enter Location Name: ");
+            string locationName = Console.ReadLine();
+            Location location = new Location(locationName);
+            bool continueAddingDevices = true;
+
+            while (continueAddingDevices)
+            {
+                Console.WriteLine("Enter Device ID : ");
+                int id = int.Parse(Console.ReadLine());
+
+                Console.WriteLine("Enter Device type (Laptop, Smartphone, Tablet, Aircon, Washingmachine, Television, Light, Refrigerator)");
+                string deviceTypeInput = Console.ReadLine();
+                Device deviceType;
+                while (!Enum.TryParse(deviceTypeInput, true, out deviceType))
+                {
+                    Console.WriteLine("Invalid device type! Please enter Laptop, SmartPhone, Tablet, or Light:");
+                    deviceTypeInput = Console.ReadLine();
+                }
+
+                Console.WriteLine("Enter Device Name: ");
+                string name = Console.ReadLine();
+
+                MyDevice device = new MyDevice(id, deviceType, name);
+
+                location.AddDevice(device);
+
+                Console.WriteLine("\nWould you like to add another device to this location? (y/n):");
+                string userChoice = Console.ReadLine();
+                continueAddingDevices = userChoice.ToLower() == "y";
+            }
+            repository.AddLocation(location);
+
+            Console.WriteLine("\nWould you like to add another location? (y/n):");
+            string continueLocationChoice = Console.ReadLine();
+            continueAdding = continueLocationChoice.ToLower() == "y";
+        }
+
+        bool showControlPanel = true;
+        while (showControlPanel)
+        {
+            Console.Clear();
+            Console.WriteLine("Control Panel:");
+            Console.WriteLine("1. Display All location and Devices");
+            Console.WriteLine("2. Toggle Device Power");
+            Console.WriteLine("3. Update Device Information");
+            Console.WriteLine("4. Count All Devices");
+            Console.WriteLine("5. Toggle All Devices in Location");
+            Console.WriteLine("6. Add Device");
+            Console.WriteLine("7. Remove Device");
+            Console.WriteLine("8. Exit");
+            Console.Write("Select an option (1-8): ");
+            string option = Console.ReadLine();
+
+            switch (option)
+            {
+                case "1":
+                    repository.DisplayAllLocations();
+                    break;
+
+                case "2":
+                    Console.WriteLine("Enter location index:");
+                    int locationIndexForPower = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Enter device ID to toggle power:");
+                    int deviceIdForPower = int.Parse(Console.ReadLine());
+                    repository.ToggleDevicePower(locationIndexForPower, deviceIdForPower);
+                    break;
+
+                case "3":
+                    Console.WriteLine("Enter location index:");
+                    int locationIndexForUpdate = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Enter device ID to update:");
+                    int deviceIdForUpdate = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Enter new device name:");
+                    string newName = Console.ReadLine();
+                    Console.WriteLine("Enter new device type (Laptop, Smartphone, Tablet, Light):");
+                    string newDeviceTypeInput = Console.ReadLine();
+                    Device newDeviceType;
+                    while (!Enum.TryParse(newDeviceTypeInput, true, out newDeviceType))
+                    {
+                        Console.WriteLine("Invalid device type! Please enter Laptop, Smartphone, Tablet, or Light:");
+                        newDeviceTypeInput = Console.ReadLine();
+                    }
+                    repository.UpdateDevice(locationIndexForUpdate, deviceIdForUpdate, newName, newDeviceType);
+                    break;
+
+                case "4":
+                    int totalDevices = repository.CountAllDevices();
+                    Console.WriteLine($"Total Devices across all locations: {totalDevices}");
+                    break;
+
+                case "5":
+                    Console.WriteLine("Enter location index to toggle all devices:");
+                    int locationIndexForAllDevices = int.Parse(Console.ReadLine());
+                    repository.ToggleAllDevicesPower(locationIndexForAllDevices);
+                    break;
+
+                case "6":
+                    // Add Device functionality
+                    Console.WriteLine("Enter location index to add a device:");
+                    int locationIndexForAdd = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Enter Device ID: ");
+                    int newDeviceId = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Enter Device type (Laptop, Smartphone, Tablet, Aircon, Washingmachine, Television, Light, Refrigerator)");
+                    string deviceTypeInputForAdd = Console.ReadLine();
+                    Device deviceTypeForAdd;
+                    while (!Enum.TryParse(deviceTypeInputForAdd, true, out deviceTypeForAdd))
+                    {
+                        Console.WriteLine("Invalid device type! Please enter Laptop, Smartphone, Tablet, or Light:");
+                        deviceTypeInputForAdd = Console.ReadLine();
+                    }
+
+                    Console.WriteLine("Enter Device Name: ");
+                    string newNameForAdd = Console.ReadLine();
+
+                    MyDevice newDevice = new MyDevice(newDeviceId, deviceTypeForAdd, newNameForAdd);
+                    repository.AddDeviceToLocation(locationIndexForAdd, newDevice);
+                    break;
+
+                case "7":
+                    // Remove Device functionality
+                    Console.WriteLine("Enter location index to remove a device:");
+                    int locationIndexForRemove = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Enter Device ID to remove:");
+                    int deviceIdForRemove = int.Parse(Console.ReadLine());
+                    repository.RemoveDevice(locationIndexForRemove, deviceIdForRemove);
+                    break;
+
+                case "8":
+                    showControlPanel = false;
+                    break;
+
+                default:
+                    Console.WriteLine("Invalid option. Please select a valid option (1-8).");
+                    break;
+            }
+            if (showControlPanel)
+            {
+                Console.WriteLine("\nPress Enter to return to the control panel...");
+                Console.ReadLine();
+            }
+        }
+
+        Console.WriteLine("\nProgram Ended");
+    }
+}
